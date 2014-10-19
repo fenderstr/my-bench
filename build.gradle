@@ -1,0 +1,75 @@
+apply plugin: 'java'
+
+group = 'ru.gvsmirnov'
+version = '0.0.1'
+
+sourceCompatibility = JavaVersion.VERSION_1_7
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:0.9.0-M3'
+    }
+}
+
+repositories {
+    jcenter()
+    mavenCentral()
+}
+
+sourceSets {
+    perf
+}
+
+dependencies {
+    compile 'org.uncommons:uncommons-maths:1.2'
+
+    perfCompile project
+
+    perfCompile 'org.openjdk.jmh:jmh-core:0.9'
+    perfCompile 'org.openjdk.jmh:jmh-generator-annprocess:0.9'
+
+}
+
+apply plugin: "idea"
+idea {
+    module {
+        scopes.PROVIDED.plus  += configurations.perfCompile
+        scopes.PROVIDED.minus += configurations.compile
+    }
+}
+
+apply plugin: "eclipse"
+eclipse {
+    classpath {
+        plusConfigurations += configurations.perfCompile
+    }
+}
+
+task benchmarks(dependsOn: perfClasses) {
+
+    apply plugin: 'com.github.johnrengelman.shadow'
+
+    shadowJar {
+        classifier = "benchmarks"
+
+        from sourceSets.perf.output
+        from sourceSets.main.output
+        from project.configurations.perfRuntime
+
+        appendManifest {
+            attributes "Main-Class": "org.openjdk.jmh.Main"
+        }
+    }
+
+    doLast {
+        shadowJar.execute()
+    }
+
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '1.12'
+}
